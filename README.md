@@ -44,6 +44,19 @@ functions:
           arn: "<stream-arn>"
 ```
 
+You can also set config values to set custom role name and if your service name is too long you can override the long service name something shorter
+```yaml
+service: very-long-service
+
+plugins:
+  - serverless-plugin-custom-roles
+
+custom:
+  customRoles:
+    useRoleName: true|false
+    shortName: 'vls'
+```
+
 ## License
 
 The MIT License (MIT)

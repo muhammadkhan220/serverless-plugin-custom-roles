@@ -33,6 +33,8 @@ class CustomRoles {
       'before:package:setupProviderConfiguration': () => this.createRoles()
     };
 
+    const custom = this.serverless.service.custom || {};
+    this.config = custom.customRoles || {};
     this.addValidation();
   }
 
@@ -167,16 +169,42 @@ class CustomRoles {
             },
             Action: 'sts:AssumeRole'
           }]
-        },
+        },                
         Policies: policies
       }
     };
-
+    if (this.config.useRoleName) {
+      role.Properties.RoleName = this.getRoleName(stackName, functionName);
+    }
     if (managedPolicies && managedPolicies.length) {
       role.Properties.ManagedPolicyArns = managedPolicies;
     }
-
     return role;
+  }
+
+  getRoleName(stackName, functionName) {
+    let result = stackName + '-';
+    const maxCharCount = 64;
+    if (this.config.shortName) {
+      result = this.config.shortName + '-';
+    }
+    result += functionName + '-';
+    if (result.length < maxCharCount) {
+      result += this.makeid(maxCharCount - result.length)
+    } else if (result.length > maxCharCount) {
+      result = result.substring(0, maxCharCount);
+    }
+    return result;
+  }
+
+  makeid(length) {
+    var result           = '';
+    var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+   }
+   return result;
   }
 
   getRoleId(functionName) {
@@ -200,7 +228,6 @@ class CustomRoles {
     }
     const sharedPolicy = this.getPolicyFromStatements('shared', sharedRoleStatements);
     const stackName = this.provider.naming.getStackName();
-
     functions.forEach(functionName => {
       const functionObj = service.getFunction(functionName);
 
@@ -229,9 +256,8 @@ class CustomRoles {
         }
 
         const roleResource = this.getRole(stackName, functionName, policies, managedPolicies);
-
         functionObj.role = roleId;
-        set(service, `resources.Resources.${roleId}`, roleResource);
+        set(service, `resources.Resources.${roleId}`, roleResource);        
       }
     });
   }
